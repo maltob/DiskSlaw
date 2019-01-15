@@ -11,7 +11,7 @@ from diskslaw_erase import disk_eraser
 from sys import stderr
 
 #Defaults
-ds_config_file_path = "/etc/DiskSlaw/main.yml"
+ds_config_file_path = "/etc/diskslaw/main.yml"
 ds_config = {}
 
 #Check if the config exists
