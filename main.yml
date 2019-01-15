@@ -1,0 +1,17 @@
+# For mechanical drives, zero or random data?
+shred_method: zero
+# For mechanical drives run this many rounds on shred
+shred_rounds: 1
+
+#Where to write the output status
+status_output_file: /tmp/DiskSlaw.out
+
+# The Model will be checked to prevent wiping of specific disks, below should prevent wiping USB drives if we 
+ignore_device_model_strings:
+ - USB
+
+# A file with a list of block devices to not wipe
+ignore_device_input_file: /tmp/DiskSlaw.ignore 
+
+# Do we want to skip all removable drives?
+skip_removable: true
