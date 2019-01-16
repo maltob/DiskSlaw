@@ -1,6 +1,6 @@
 from os import path,scandir
 from sys import stderr
-from subprocess import Popen,PIPE
+from subprocess import Popen,PIPE,DEVNULL
 
 #Write out validation items
 def create_validation_text(validation_string,device):
@@ -74,12 +74,13 @@ def get_valid_devices(devices_to_skip,models_to_skip,skip_removable=True):
         #Check if we should explicitly skip it
         if not entry.name in devices_to_skip:
             #Check if the model is one we should skip
-            with open('/sys/block/'+entry.name+'/device/model') as model_fo:
-                model = model_fo.read().strip()
-                for checked_model in models_to_skip:
-                    if checked_model in model.lower() and not entry.name in skipped_devices:
-                        skipped_devices.append(entry.name)
-                        skipped_reason.append("Model \""+model.lower()+"\" matched \""+checked_model+"\"")
+            if path.exists('/sys/block/'+entry.name+'/device/model'):
+                with open('/sys/block/'+entry.name+'/device/model') as model_fo:
+                    model = model_fo.read().strip()
+                    for checked_model in models_to_skip:
+                        if checked_model in model.lower() and not entry.name in skipped_devices:
+                            skipped_devices.append(entry.name)
+                            skipped_reason.append("Model \""+model.lower()+"\" matched \""+checked_model+"\"")
             #Make sure model check didn't add the device to skipped devices
             if not entry.name in skipped_devices:
                 #Check if the device is read-only
@@ -117,9 +118,12 @@ def get_valid_devices(devices_to_skip,models_to_skip,skip_removable=True):
     return valid_devices,skipped_devices,skipped_reason
 
 def get_sys_block_property_int(device,path):
-    with open('/sys/block/'+device+'/'+path) as prop_fo:
-        prop= int(prop_fo.read().strip())
-        return prop
+    try:
+        with open('/sys/block/'+device+'/'+path) as prop_fo:
+            prop= int(prop_fo.read().strip())
+            return prop
+    except:
+        return -1
 
 def get_rotational(device):
     rotates = True
@@ -129,33 +133,39 @@ def get_rotational(device):
 
 def get_secure_erase(device):
     secure_erasable = False
-    hdparm_p = Popen(['hdparm','-I',('/dev/'+device)],stdout=PIPE)
+    hdparm_p = Popen(['hdparm','-I',('/dev/'+device)],stdout=PIPE,stderr=DEVNULL)
     (hdparm_out,_) = hdparm_p.communicate()
-    if 'supported: enhanced erase' in hdparm_out:
+    if 'supported: enhanced erase' in str(hdparm_out):
         secure_erasable = True
     return secure_erasable
 
 def get_drive_frozen(device):
-    frozen = True
-    hdparm_p = Popen(['hdparm','-I',('/dev/'+device)],stdout=PIPE)
+    frozen = False
+    hdparm_p = Popen(['hdparm','-I',('/dev/'+device)],stdout=PIPE,stderr=DEVNULL)
     (hdparm_out,_) = hdparm_p.communicate()
-    if 'not\tfrozen' in hdparm_out:
-        frozen = False
+    if 'frozen' in str(hdparm_out):
+        if 'not\tfrozen' in str(hdparm_out):
+            frozen = False
+        else:
+            frozen = True
     return frozen
 
 def get_drive_has_master_password(device):
-    has_master_password = True
-    hdparm_p = Popen(['hdparm','-I',('/dev/'+device)],stdout=PIPE)
+    has_master_password = False
+    hdparm_p = Popen(['hdparm','-I',('/dev/'+device)],stdout=PIPE,stderr=DEVNULL)
     (hdparm_out,_) = hdparm_p.communicate()
-    if 'not\tenabled' in hdparm_out:
-        has_master_password = False
+    if 'enabled' in str(hdparm_out):
+        if 'not\tenabled' in str(hdparm_out):
+            has_master_password = False
+        else:
+            has_master_password = True
     return has_master_password
 
 def get_secure_erase_time(device):
     secure_erase_time=5
-    hdparm_p = Popen(['hdparm','-I',('/dev/'+device)],stdout=PIPE)
+    hdparm_p = Popen(['hdparm','-I',('/dev/'+device)],stdout=PIPE,stderr=DEVNULL)
     (hdparm_out,_) = hdparm_p.communicate()
-    if 'supported: enhanced erase' in hdparm_out:
+    if 'supported: enhanced erase' in str(hdparm_out):
         for line in hdparm_out.split('\n'):
             if 'SECURITY ERASE UNIT' in line and 'min' in line:
                 secure_erase_time = int(line.strip().split('min')[0])

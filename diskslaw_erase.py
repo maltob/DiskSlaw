@@ -1,6 +1,7 @@
-from subprocess import call
-from diskslaw_block import get_rotational,get_secure_erase,get_drive_has_master_password,get_secure_erase_time
+from subprocess import call,Popen,PIPE
+from diskslaw_block import get_rotational,get_secure_erase,get_drive_has_master_password,get_secure_erase_time,get_disk_size,create_validation_text,validate_text
 from time import sleep,monotonic
+from math import floor
 import threading
 
 class disk_eraser(threading.Thread):
@@ -10,6 +11,8 @@ class disk_eraser(threading.Thread):
 
     mech_wipe_type = "zero"
     mech_wipe_rounds = 1
+
+    wipe_validated = False
 
     def __init__(self,device,mechanical_wipe_type="zero",mechanical_rounds=1):
         threading.Thread.__init__(self)
@@ -35,16 +38,17 @@ class disk_eraser(threading.Thread):
         return (retcode == 0)
 
     def shred_device(self,device,rounds=1):
-        retcode = call(['shred',('-n '+rounds),'--verbose',('/dev/'+device)])
+        retcode = call(['shred',('-n '+str(rounds)),('/dev/'+device)])
         return (retcode == 0)
 
     def zero_device(self,device,rounds=1):
-        retcode = 0
-        for _ in range(rounds):
-            retcode += call(['dd','if=/dev/zero',('of=/dev/'+device),'bs=1M'])
+        retcode = call(['shred',('-n '+str(rounds)),'--random-source=/dev/zero',('/dev/'+device)])
         return (retcode == 0)
 
-    def wipe(self,device,mechanical_wipe_type='zero',mechanical_rounds=1):
+    def wipe(self,device,mechanical_wipe_type='zero',mechanical_rounds=1,validation_string='HECTORSPECTORFLETCHER'):
+        #Write out text to make sure we know if it worked
+        create_validation_text(validation_string,device)
+
         if 'nvme' in device:
             #NVMe drive, wipe
             self.wipe_return_code = self.nvme_wipe(device)
@@ -80,3 +84,6 @@ class disk_eraser(threading.Thread):
             else:
                 self.wipe_return_code = self.shred_device(device,mechanical_rounds)
                 self.wipe_type = "shred"
+        #Check the text is gone
+        if validate_text(validation_string,device) == True:
+            self.wipe_validated = True

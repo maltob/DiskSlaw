@@ -24,13 +24,20 @@ if path.isfile(ds_config_file_path):
 #Function for formatting the output
 def ds_output(item,status,path,delimeter='\t'):
     with open(path,'a') as ds_append_fo:
-        with datetime.datetime.now() as now:
-            ds_append_fo.write(''+item+delimeter+status+delimeter+now.isoformat())
+        ds_append_fo.write(''+item+delimeter+status+delimeter+datetime.now().isoformat()+'\n')
 
 #Where output should go
 ds_output_file = '/tmp/DiskSlaw.out'
 if 'output_file' in ds_config:
     ds_output_file = ds_config['output_file']
+
+#Create the dialog
+userDialog = Dialog(dialog="dialog",autowidgetsize=True)
+userDialog.set_background_title("Drive Wipe")
+
+if path.exists(ds_output_file):
+    #We've already wiped 
+    userDialog.msgbox("Previous Wipe Log located")
 
 #Set default config for valid devices
 devices_to_skip = []
@@ -47,8 +54,9 @@ if 'ignore_device_model_strings' in ds_config:
     models_to_skip = ds_config['ignore_device_model_strings']
 
 if 'ignore_device_input_file' in ds_config:
-    with open(ds_config['ignore_device_input_file'],'r') as ignore_device_fo:
-        devices_to_skip = ignore_device_fo.readlines()
+    if path.isfile(ds_config['ignore_device_input_file']):
+        with open(ds_config['ignore_device_input_file'],'r') as ignore_device_fo:
+            devices_to_skip = ignore_device_fo.readlines()
 
 if 'shred_method' in ds_config:
     if ds_config['shred_method'] == 'zero':
@@ -72,9 +80,7 @@ for device in skipped_devices:
     ds_output(device,'SKIPPED: '+skipped_device_reason[index],ds_output_file)
     index+=1
 
-#Create the dialog
-userDialog = Dialog(dialog="dialog",autowidgetsize=True)
-userDialog.set_background_title("Drive Wipe")
+
 
 #Check for any frozen drives
 anyDeviceFrozen = False
@@ -115,7 +121,7 @@ while allThreadsFinished == False:
     if threadsRunning == 0:
         allThreadsFinished = True
     #Update dialog
-    userDialog.gauge_update(len(disks_completed)/len(wiping_threads),"Wiping disks\n\nCompleted:"+(','.join(disks_completed))+"\n\nRunning:"+(','.join(disks_wiping)))
+    userDialog.gauge_update(int(len(disks_completed)/len(wiping_threads)),"Wiping disks\n\nCompleted:"+(','.join(disks_completed))+"\n\nRunning:"+(','.join(disks_wiping)))
 
 for device in wiping_threads:
-    ds_output(device.wipe_device,""+device.wipe_type+":"+device.wipe_return_code,ds_output_file)
+    ds_output(device.wipe_device,""+device.wipe_type+":"+device.wipe_return_code+'. Validated:'+str(device.wipe_validated),ds_output_file)
