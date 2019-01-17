@@ -24,12 +24,12 @@ class disk_eraser(threading.Thread):
     def run(self):
         self.wipe(self.wipe_device,self.mech_wipe_type,self.mech_wipe_rounds)
     def nvme_wipe(self,device,wipe_type=1):
-        retcode = call(['nvme','format',('/dev/'+device),'-s',wipe_type])
-        return (retcode == 0)
+        retcode = call(['nvme','format',('/dev/'+device),'-s',str(wipe_type)])
+        return retcode
 
     def sata_secure_erase(self,device,password,user='u',expected_time=0):
         retcode = call(['hdparm','--user-master',user,'--security-erase',password,('/dev/'+device)])
-        return (retcode == 0)
+        return retcode
 
     def sata_set_password(self,device,password,user='u'):
         retcode = call(['hdparm','--user-master',user,'--security-set-pass',password,('/dev/'+device)])
