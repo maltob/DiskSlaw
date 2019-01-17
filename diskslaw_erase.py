@@ -14,6 +14,8 @@ class disk_eraser(threading.Thread):
 
     wipe_validated = False
 
+    wipe_time = -1
+
     def __init__(self,device,mechanical_wipe_type="zero",mechanical_rounds=1):
         threading.Thread.__init__(self)
         self.mech_wipe_rounds = mechanical_rounds
@@ -38,22 +40,31 @@ class disk_eraser(threading.Thread):
         return (retcode == 0)
 
     def shred_device(self,device,rounds=1):
-        retcode = call(['shred',('-n '+str(rounds)),('/dev/'+device)])
-        return (retcode == 0)
+        retcode = call(['shred',('-n '+str(rounds)),'--verbose',('/dev/'+device)],None,stderr=open('/tmp/diskslaw_shred_'+device+'.log','w'))
+        return (retcode)
 
     def zero_device(self,device,rounds=1):
-        retcode = call(['shred',('-n '+str(rounds)),'--random-source=/dev/zero',('/dev/'+device)])
-        return (retcode == 0)
+        retcode = call(['shred',('-n '+str(rounds)),'--verbose','--random-source=/dev/zero',('/dev/'+device)],None,stderr=open('/tmp/diskslaw_shred_'+device+'.log','w'))
+        return (retcode)
+    @staticmethod
+    def get_device_wipe_type(device):
+        if 'nvme' in device:
+            return 'nvme'
+        elif get_secure_erase(device) == True:
+            return 'se'
+        else:
+            return 'shred'
 
     def wipe(self,device,mechanical_wipe_type='zero',mechanical_rounds=1,validation_string='HECTORSPECTORFLETCHER'):
         #Write out text to make sure we know if it worked
         create_validation_text(validation_string,device)
-
-        if 'nvme' in device:
+        wipe_type = disk_eraser.get_device_wipe_type(device)
+        wipe_start = monotonic()
+        if wipe_type == 'nvme':
             #NVMe drive, wipe
             self.wipe_return_code = self.nvme_wipe(device)
             self.wipe_type = "nvme format"
-        elif get_secure_erase(device) == True:
+        elif wipe_type == 'se':
             #Supports secure erase, either a mechanical drive with encryption or an SSD
             #Set the password so we can wipe it, I've had better luck with calling it twice
             if get_drive_has_master_password(device) == False:
@@ -85,5 +96,8 @@ class disk_eraser(threading.Thread):
                 self.wipe_return_code = self.shred_device(device,mechanical_rounds)
                 self.wipe_type = "shred"
         #Check the text is gone
-        if validate_text(validation_string,device) == True:
+        _,wiped_validation = validate_text(validation_string,device)
+        if wiped_validation == True:
             self.wipe_validated = True
+        #Update the wipe time
+        self.wipe_time = monotonic()-wipe_start
