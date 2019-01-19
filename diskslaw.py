@@ -11,6 +11,7 @@ from diskslaw_erase import disk_eraser
 from sys import stderr
 from time import sleep,monotonic
 import re
+import sys
 
 #Defaults
 ds_config_file_path = "/etc/diskslaw/main.yml"
@@ -93,14 +94,10 @@ if anyDeviceFrozen == True:
 #Wipe the drive
 userDialog.gauge_start("Starting disk wipe", 15,45,0,ascii_lines=True)
 wiping_threads = []
-thread_disks = []
-thread_disk_wipe_type = []
 for i in range(len(valid_devices)):
     t = disk_eraser(valid_devices[i],shred_method,shred_rounds)
     t.start()
     wiping_threads.append(t)
-    thread_disks.append(valid_devices[i])
-    thread_disk_wipe_type.append(disk_eraser.get_device_wipe_type(valid_devices[i]))
     userDialog.gauge_update((int((i/len(valid_devices))*100)))
 userDialog.gauge_stop()
 
@@ -119,33 +116,32 @@ while allThreadsFinished == False:
             threadsRunning+=1
             try:
                 eta = ' '
-                if thread_disk_wipe_type[i] == 'se':
-                    se_time = get_secure_erase_time(thread_disks[i])
+                if wiping_threads[i].device_expected_wipe_type == 'se':
+                    se_time = get_secure_erase_time(wiping_threads[i].wipe_device)
                     elapsed = monotonic()-start_time
                     eta = str(int(elapsed/se_time))+'%'
-                elif thread_disk_wipe_type[i] == 'shred':
-                    if path.exists('/tmp/diskslaw_shred_'+thread_disks[i]+'.log'):
-                        with open('/tmp/diskslaw_shred_'+thread_disks[i]+'.log','r') as dl:
-                            lines = dl.readlines()
-                            lines.reverse()
-                            for line in lines and eta != ' ':
-                                if '%' in line:
-                                    matches = shred_re.findall(line)
-                                    if len(matches) == 1 and len(matches[0]) == 3:
-                                        current_round,all_rounds,round_percent = matches[0]
-                                        eta = str((float(current_round)/int(all_rounds))*int(round_percent))+'%'
-                disks_wiping.append(thread_disks[i]+eta)
+                if eta == ' ' and path.exists('/tmp/diskslaw_shred_'+wiping_threads[i].wipe_device+'.log'):
+                    with open('/tmp/diskslaw_shred_'+wiping_threads[i].wipe_device+'.log','r') as dl:
+                        lines = dl.readlines()
+                        lines.reverse()
+                        for line in lines:
+                            if '%' in line and eta == ' ':
+                                matches = shred_re.findall(line)
+                                if len(matches) == 1 and len(matches[0]) == 3:
+                                    current_round,all_rounds,round_percent = matches[0]
+                                    eta = str(int((float(current_round)/int(all_rounds))*int(round_percent)))+'%'
+                disks_wiping.append(wiping_threads[i].wipe_device+'('+eta+') ')
             except:
-                disks_wiping.append(thread_disks[i])
+                disks_wiping.append(wiping_threads[i].wipe_device)
         else:
             valid = '(F)'
             if wiping_threads[i].wipe_validated == True:
                 valid = '(P)'
-            disks_completed.append(thread_disks[i]+' '+valid)
+            disks_completed.append(wiping_threads[i].wipe_device+' '+valid)
     if threadsRunning == 0:
         allThreadsFinished = True
     #Update dialog
-    userDialog.gauge_update(int(float(len(disks_completed))/len(wiping_threads))*100,"Wiping disks\n\nCompleted:"+(','.join(disks_completed))+"\n\nRunning:"+(','.join(disks_wiping)),True)
+    userDialog.gauge_update(int((float(len(disks_completed))/len(wiping_threads))*100),"Wiping disks\n\nCompleted:"+(','.join(disks_completed))+"\n\nRunning:"+(','.join(disks_wiping)),True)
     sleep(5)
 
 for device in wiping_threads:

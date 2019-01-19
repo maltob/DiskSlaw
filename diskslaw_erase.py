@@ -5,30 +5,34 @@ from math import floor
 import threading
 
 class disk_eraser(threading.Thread):
+    #Result properies
     wipe_return_code=-1
     wipe_type=""
     wipe_device = ""
-
+    wipe_validated = False
+    wipe_time = -1
+    device_expected_wipe_type = "shred"
+    
     mech_wipe_type = "zero"
     mech_wipe_rounds = 1
 
-    wipe_validated = False
 
-    wipe_time = -1
-
+    
     def __init__(self,device,mechanical_wipe_type="zero",mechanical_rounds=1):
         threading.Thread.__init__(self)
         self.mech_wipe_rounds = mechanical_rounds
         self.mech_wipe_type = mechanical_wipe_type
         self.wipe_device = device
+        self.device_expected_wipe_type = disk_eraser.get_device_wipe_type(device)
+
     def run(self):
         self.wipe(self.wipe_device,self.mech_wipe_type,self.mech_wipe_rounds)
     def nvme_wipe(self,device,wipe_type=1):
-        retcode = call(['nvme','format',('/dev/'+device),'-s',str(wipe_type)])
+        retcode = call(['nvme','format',('/dev/'+device),'-s',str(wipe_type)],None,stderr=open('/tmp/diskslaw_nvme_'+device+'.log','w'))
         return retcode
 
     def sata_secure_erase(self,device,password,user='u',expected_time=0):
-        retcode = call(['hdparm','--user-master',user,'--security-erase',password,('/dev/'+device)])
+        retcode = call(['hdparm','--user-master',user,'--security-erase',password,('/dev/'+device)],None,stderr=open('/tmp/diskslaw_se_'+device+'.log','w'))
         return retcode
 
     def sata_set_password(self,device,password,user='u'):
@@ -58,13 +62,23 @@ class disk_eraser(threading.Thread):
     def wipe(self,device,mechanical_wipe_type='zero',mechanical_rounds=1,validation_string='HECTORSPECTORFLETCHER'):
         #Write out text to make sure we know if it worked
         create_validation_text(validation_string,device)
-        wipe_type = disk_eraser.get_device_wipe_type(device)
+        
         wipe_start = monotonic()
-        if wipe_type == 'nvme':
+        if self.device_expected_wipe_type == 'nvme':
             #NVMe drive, wipe
-            self.wipe_return_code = self.nvme_wipe(device)
-            self.wipe_type = "nvme format"
-        elif wipe_type == 'se':
+            nvme_ret = self.nvme_wipe(device)
+            if nvme_ret == 0:
+                self.wipe_type = "nvme format"
+                self.wipe_return_code = nvme_ret
+            else:
+                #Fall back to shred
+                if mechanical_wipe_type == 'zero':
+                    self.wipe_return_code = self.zero_device(device,mechanical_rounds)
+                    self.wipe_type = "zero"
+                else:
+                    self.wipe_return_code = self.shred_device(device,mechanical_rounds)
+                    self.wipe_type = "shred"
+        elif self.device_expected_wipe_type== 'se':
             #Supports secure erase, either a mechanical drive with encryption or an SSD
             #Set the password so we can wipe it, I've had better luck with calling it twice
             if get_drive_has_master_password(device) == False:
@@ -76,17 +90,30 @@ class disk_eraser(threading.Thread):
             estimated_time = get_secure_erase_time(device)
             #Get current time
             start_time = monotonic()
+
             #Wipe
             se_ret = self.sata_secure_erase(device,'pass')
-            #Get time elapsed
-            elapsed = monotonic()-start_time
-            #If we are far off from estimated time, sleep to allow the drive to finish up
-            if(((estimated_time*60)*0.9) > (elapsed)):
-                sleep(int((estimated_time*60)-elapsed))
-            #Disable the password so we don't lock the drive access
+
+            #Disable the drive password to unlock it
             self.sata_disable_password(device,'pass')
-            self.wipe_return_code = se_ret
-            self.wipe_type = "secure erase"
+
+            #If secure erase failed, fall back to shred
+            if se_ret != 0:
+                #Fall back to shred
+                if mechanical_wipe_type == 'zero':
+                    self.wipe_return_code = self.zero_device(device,mechanical_rounds)
+                    self.wipe_type = "zero"
+                else:
+                    self.wipe_return_code = self.shred_device(device,mechanical_rounds)
+                    self.wipe_type = "shred"
+            else:
+                #Get time elapsed
+                elapsed = monotonic()-start_time
+                #If we are far off from estimated time, sleep to allow the drive to finish up
+                if(((estimated_time*60)*0.9) > (elapsed)):
+                    sleep(int((estimated_time*60)-elapsed))
+                self.wipe_return_code = se_ret
+                self.wipe_type = "secure erase"
         else:
             #Mechanical Drive probably, doesn't support secure erase so write to it
             if mechanical_wipe_type == 'zero':
