@@ -33,10 +33,10 @@ I wanted a solution that would:
 
 ### Screenshots
 ##### Wiping Screen
-
+![Screenshot of wiping progress bar](https://github.com/maltob/DiskSlaw/raw/master/img/Wiping_Progress.png)
 ##### Results Screen - With Fallback
  The NVMe drive shows a warning because VirtualBox doesn't emulate NVMe format so it fell back to using shred
-
+![Screenshot of results panel](https://github.com/maltob/DiskSlaw/raw/master/img/VirtualBox_TestWipe.png)
 
 ## Quick Start
 Overview of use
