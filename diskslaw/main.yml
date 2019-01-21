@@ -1,0 +1,25 @@
+# For mechanical drives format it with zero or random data
+shred_method: zero
+
+# For mechanical drives or when another
+ # type fails to erase the proper method run this many passes
+shred_rounds: 1
+
+#Where to write the results csv for parsing
+output_file: /tmp/DiskSlaw.csv
+
+# The Model will be checked to prevent wiping of specific disks,
+# below should prevent wiping USB drives
+ignore_device_model_strings:
+ - USB
+
+# A file with a list of block devices to not wipe
+ignore_device_input_file: /tmp/DiskSlaw.ignore 
+
+# Skip removables so we don't wipe flash drives left in
+skip_removable: true
+
+# Type of secure erase requested for NVMe disks
+# 1 = Write over all data
+# 2 = Delete encryption key to make the data unreadable
+nvme_wipe_type: 1

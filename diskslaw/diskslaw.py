@@ -11,10 +11,9 @@ from diskslaw_erase import disk_eraser
 from sys import stderr
 from time import sleep,monotonic
 import re
-import sys
 
 #Defaults
-ds_config_file_path = "/etc/diskslaw/main.yml"
+ds_config_file_path = "/opt/diskslaw/main.yml"
 ds_config = {}
 
 #Check if the config exists
@@ -25,9 +24,13 @@ if path.isfile(ds_config_file_path):
 
 
 #Function for formatting the output
-def ds_output(item,status,path,delimeter='\t'):
-    with open(path,'a') as ds_append_fo:
-        ds_append_fo.write(''+item+delimeter+status+delimeter+datetime.now().isoformat()+'\n')
+def ds_output(item,status,details,filepath,return_code=0,time_spent=0,validated=False,delimeter='\t'):
+    #If its a new file add the header row
+    if not path.exists(filepath):
+        with open(filepath,'w') as log_fo:
+            log_fo.write('device'+delimeter+'status'+delimeter+'validated'+delimeter+'details'+delimeter+'return_code'+delimeter+'time_spent'+delimeter+'datetime\n')
+    with open(filepath,'a') as ds_append_fo:
+        ds_append_fo.write(''+item+delimeter+status+delimeter+str(validated)+delimeter+details+delimeter+str(return_code)+delimeter+str(time_spent)+delimeter+datetime.now().isoformat()+'\n')
 
 #Where output should go
 ds_output_file = '/tmp/DiskSlaw.out'
@@ -44,6 +47,7 @@ models_to_skip = []
 skip_removables = True
 shred_method = 'zero'
 shred_rounds = 1
+nvme_wipe_type = 1
 
 #Load in config options
 if 'skip_removable' in ds_config:
@@ -70,13 +74,21 @@ if 'shred_rounds' in ds_config:
     except:
         print("ERROR reading shred rounds",file=stderr)
 
+# There's only two actually valid wipe types for NVMe, 1 and 2
+if 'nvme_wipe_type' in ds_config:
+    try:
+        if int(ds_config['nvme_wipe_type'] ) > 0 and int(ds_config['nvme_wipe_type'] ) < 3:
+            nvme_wipe_type = int(ds_config['nvme_wipe_type'])
+    except:
+        print("ERROR reading nvme_wipe_type",file=stderr)
+
 #Get valid and skipped device following rules from the config
 (valid_devices,skipped_devices,skipped_device_reason) = get_valid_devices(devices_to_skip,models_to_skip,skip_removables)
 
 #Log out the skipped devices
 index = 0
 for device in skipped_devices:
-    ds_output(device,'SKIPPED: '+skipped_device_reason[index],ds_output_file)
+    ds_output(device,'skipped',skipped_device_reason[index],ds_output_file)
     index+=1
 
 
@@ -95,7 +107,7 @@ if anyDeviceFrozen == True:
 userDialog.gauge_start("Starting disk wipe", 15,45,0,ascii_lines=True)
 wiping_threads = []
 for i in range(len(valid_devices)):
-    t = disk_eraser(valid_devices[i],shred_method,shred_rounds)
+    t = disk_eraser(valid_devices[i],shred_method,shred_rounds,nvme_wipe_type)
     t.start()
     wiping_threads.append(t)
     userDialog.gauge_update((int((i/len(valid_devices))*100)))
@@ -116,7 +128,7 @@ while allThreadsFinished == False:
             threadsRunning+=1
             try:
                 eta = ' '
-                if wiping_threads[i].device_expected_wipe_type == 'se':
+                if wiping_threads[i].device_expected_wipe_type == 'secure erase':
                     se_time = get_secure_erase_time(wiping_threads[i].wipe_device)
                     elapsed = monotonic()-start_time
                     eta = str(int(elapsed/se_time))+'%'
@@ -130,6 +142,9 @@ while allThreadsFinished == False:
                                 if len(matches) == 1 and len(matches[0]) == 3:
                                     current_round,all_rounds,round_percent = matches[0]
                                     eta = str(int((float(current_round)/int(all_rounds))*int(round_percent)))+'%'
+
+                if eta == ' ':
+                    eta = '0%'
                 disks_wiping.append(wiping_threads[i].wipe_device+'('+eta+') ')
             except:
                 disks_wiping.append(wiping_threads[i].wipe_device)
@@ -140,9 +155,13 @@ while allThreadsFinished == False:
             disks_completed.append(wiping_threads[i].wipe_device+' '+valid)
     if threadsRunning == 0:
         allThreadsFinished = True
+    
     #Update dialog
     userDialog.gauge_update(int((float(len(disks_completed))/len(wiping_threads))*100),"Wiping disks\n\nCompleted:"+(','.join(disks_completed))+"\n\nRunning:"+(','.join(disks_wiping)),True)
-    sleep(5)
+    sleep(2)
 
 for device in wiping_threads:
-    ds_output(device.wipe_device,""+device.wipe_type+":"+str(device.wipe_return_code)+'. Validated:'+str(device.wipe_validated)+'. Wipe Time:'+str(int(device.wipe_time))+' seconds',ds_output_file)
+    details = ''
+    if device.wipe_type != device.device_expected_wipe_type:
+        details = device.wipe_type+' was used instead of the anticipated '+device.device_expected_wipe_type
+    ds_output(device.wipe_device,device.wipe_type,details,ds_output_file,device.wipe_return_code,int(device.wipe_time),device.wipe_validated)

@@ -165,8 +165,12 @@ def get_secure_erase_time(device):
     secure_erase_time=5
     hdparm_p = Popen(['hdparm','-I',('/dev/'+device)],stdout=PIPE,stderr=DEVNULL)
     (hdparm_out,_) = hdparm_p.communicate()
-    if 'supported: enhanced erase' in str(hdparm_out):
-        for line in hdparm_out.split('\n'):
-            if 'SECURITY ERASE UNIT' in line and 'min' in line:
-                secure_erase_time = int(line.strip().split('min')[0])
+    if 'SECURITY ERASE UNIT' in str(hdparm_out):
+        for line in str(hdparm_out).split('\\n'):
+            if 'SECURITY ERASE UNIT' in line:
+                if 'min ' in line:
+                    line_parts = (line.strip()).split('min ')
+                    if len(line_parts) > 1:
+                        est_min = line_parts[0]
+                        secure_erase_time = int(est_min.strip('\\t'))
     return secure_erase_time
