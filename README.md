@@ -53,11 +53,11 @@ Overview of use
 
  #### Network - iPXE
  Using iPXE is recommended due to the download being over half a gigabit.
- TODO : Clean up below
+ See [Setting Up Network boot on a Linux Server](https://github.com/maltob/DiskSlaw/wiki/Setting-up-network-boot-on-a-Linux-Server) on the Wiki for a step by step guide
   1) Configure the DHCP scope to boot ipxe - See instructions from ipxe.org [Chainloading iPXE on ipxe.org](https://ipxe.org/howto/chainloading)
   2) Download the ISO from releases
   3) Extract or mount the ISO
-  4) Copy the filesystem.squashfs, vmlinuz, and initrd to a web server
+  4) Copy the filesystem.squashfs from our disk and the vmlinuz, and initrd from a debian live distro (~2GB ISO) to a web server
     4.1. If you use Microsoft IIS as your web server you will need to add ".squashfs" and "." as a MIME type of "application/octet-stream" 
    5) Create an iPXE script like below to boot the disk 
    (WARNING : It will autoamtically wipe without further input unless there is a frozen SSD)
