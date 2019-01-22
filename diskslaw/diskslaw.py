@@ -6,7 +6,7 @@ from dialog import Dialog
 from os import path
 from datetime import datetime
 from diskslaw_power_management import disable_terminal_blanking,suspend_computer
-from diskslaw_block import create_validation_text,validate_text,get_valid_devices,get_drive_frozen,get_secure_erase_time
+from diskslaw_block import create_validation_text,validate_text,get_valid_devices,get_drive_frozen,get_secure_erase_time,get_wwid,get_model,get_vendor
 from diskslaw_erase import disk_eraser
 from sys import stderr
 from time import sleep,monotonic
@@ -24,13 +24,13 @@ if path.isfile(ds_config_file_path):
 
 
 #Function for formatting the output
-def ds_output(item,status,details,filepath,return_code=0,time_spent=0,validated=False,delimeter='\t'):
+def ds_output(item,status,details,filepath,return_code=0,time_spent=0,validated=False,delimeter='\t',vendor='',model='',wwid=''):
     #If its a new file add the header row
     if not path.exists(filepath):
         with open(filepath,'w') as log_fo:
-            log_fo.write('device'+delimeter+'status'+delimeter+'validated'+delimeter+'details'+delimeter+'return_code'+delimeter+'time_spent'+delimeter+'datetime\n')
+            log_fo.write('device'+delimeter+'status'+delimeter+'validated'+delimeter+'details'+delimeter+'return_code'+delimeter+'time_spent'+delimeter+'vendor'+delimeter+'model'+delimeter+'wwid'+delimeter+'datetime\n')
     with open(filepath,'a') as ds_append_fo:
-        ds_append_fo.write(''+item+delimeter+status+delimeter+str(validated)+delimeter+details+delimeter+str(return_code)+delimeter+str(time_spent)+delimeter+datetime.now().isoformat()+'\n')
+        ds_append_fo.write(''+item+delimeter+status+delimeter+str(validated)+delimeter+details+delimeter+str(return_code)+delimeter+str(time_spent)+delimeter+vendor+delimeter+model+delimeter+wwid+delimeter+datetime.now().isoformat()+'\n')
 
 #Where output should go
 ds_output_file = '/tmp/DiskSlaw.out'
@@ -48,6 +48,9 @@ skip_removables = True
 shred_method = 'zero'
 shred_rounds = 1
 nvme_wipe_type = 1
+attempt_enhanced_secure_erase = False
+always_shred = False
+always_shred_rotational = False
 
 #Load in config options
 if 'skip_removable' in ds_config:
@@ -73,6 +76,15 @@ if 'shred_rounds' in ds_config:
             shred_rounds = int(ds_config['shred_rounds'])
     except:
         print("ERROR reading shred rounds",file=stderr)
+
+if 'attempt_enhanced_secure_erase' in ds_config:
+    attempt_enhanced_secure_erase = bool(ds_config['attempt_enhanced_secure_erase'])
+
+if 'always_shred' in ds_config:
+    always_shred = bool(ds_config['always_shred'])
+
+if 'always_shred_rotational' in ds_config:
+    always_shred_rotational = bool(ds_config['always_shred_rotational'])
 
 # There's only two actually valid wipe types for NVMe, 1 and 2
 if 'nvme_wipe_type' in ds_config:
@@ -107,7 +119,7 @@ if anyDeviceFrozen == True:
 userDialog.gauge_start("Starting disk wipe", 15,45,0,ascii_lines=True)
 wiping_threads = []
 for i in range(len(valid_devices)):
-    t = disk_eraser(valid_devices[i],shred_method,shred_rounds,nvme_wipe_type)
+    t = disk_eraser(valid_devices[i],shred_method,shred_rounds,nvme_wipe_type,always_shred,attempt_enhanced_secure_erase,always_shred_rotational)
     t.start()
     wiping_threads.append(t)
     userDialog.gauge_update((int((i/len(valid_devices))*100)))
@@ -128,7 +140,7 @@ while allThreadsFinished == False:
             threadsRunning+=1
             try:
                 eta = ' '
-                if wiping_threads[i].device_expected_wipe_type == 'secure erase':
+                if 'secure erase' in wiping_threads[i].device_expected_wipe_type:
                     se_time = get_secure_erase_time(wiping_threads[i].wipe_device)
                     elapsed = monotonic()-start_time
                     eta = str(int(elapsed/se_time))+'%'
@@ -163,5 +175,5 @@ while allThreadsFinished == False:
 for device in wiping_threads:
     details = ''
     if device.wipe_type != device.device_expected_wipe_type:
-        details = device.wipe_type+' was used instead of the anticipated '+device.device_expected_wipe_type
-    ds_output(device.wipe_device,device.wipe_type,details,ds_output_file,device.wipe_return_code,int(device.wipe_time),device.wipe_validated)
+        details = 'Mismatch: '+device.wipe_type+' vs '+device.device_expected_wipe_type
+    ds_output(device.wipe_device,device.wipe_type,details,ds_output_file,device.wipe_return_code,int(device.wipe_time),device.wipe_validated,vendor=get_vendor(device.wipe_device),model=get_model(device.wipe_device),wwid=get_wwid(device.wipe_device))

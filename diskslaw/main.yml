@@ -23,3 +23,14 @@ skip_removable: true
 # 1 = Write over all data
 # 2 = Delete encryption key to make the data unreadable
 nvme_wipe_type: 1
+
+# Always shred rotational disks - even if they support secure erase
+always_shred_rotational: false
+
+#Run shred even if we used secure erase/nvme format
+always_shred: false
+
+# Attempt enhanced Secure Erase
+# Enhanced secure erase *may* attempt to overwrite even blocks marked as bad or reserved at the cost of taking longer 
+# Not all drives support enhanced erase
+attempt_enhanced_secure_erase: true

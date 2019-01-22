@@ -125,11 +125,36 @@ def get_sys_block_property_int(device,path):
     except:
         return -1
 
+def get_sys_block_property_str(device,path):
+    try:
+        with open('/sys/block/'+device+'/'+path) as prop_fo:
+            prop= str(prop_fo.read().strip())
+            return prop
+    except:
+        return ''
+
 def get_rotational(device):
     rotates = True
     if get_sys_block_property_int(device,'queue/rotational') != 1:
         rotates = False
     return rotates
+
+def get_model(device):
+    return get_sys_block_property_str(device,'/device/model')
+
+def get_vendor(device):
+    return get_sys_block_property_str(device,'/device/vendor')
+
+def get_wwid(device):
+    wwid_line = get_sys_block_property_str(device,'/device/wwid')
+    if wwid_line != '':
+        wwid_line_tokens = wwid_line.strip().split(' ')
+        try:
+            return wwid_line_tokens[len(wwid_line_tokens)-1]
+        except:
+            return ''
+    else:
+        return ''
 
 def get_secure_erase(device):
     secure_erasable = False
@@ -172,5 +197,23 @@ def get_secure_erase_time(device):
                     line_parts = (line.strip()).split('min ')
                     if len(line_parts) > 1:
                         est_min = line_parts[0]
+                        secure_erase_time = int(est_min.strip('\\t'))
+    return secure_erase_time
+
+def get_enhanced_secure_erase_time(device):
+    secure_erase_time=10
+    hdparm_p = Popen(['hdparm','-I',('/dev/'+device)],stdout=PIPE,stderr=DEVNULL)
+    (hdparm_out,_) = hdparm_p.communicate()
+    if 'ENHANCED SECURITY ERASE UNIT' in str(hdparm_out):
+        for line in str(hdparm_out).split('\\n'):
+            if 'ENHANCED SECURITY ERASE UNIT' in line:
+                if 'min ' in line:
+                    line_parts = (line.strip()).split('min ')
+                    if len(line_parts) > 1 and len(line_parts) < 3:
+                        est_min = line_parts[0]
+                        secure_erase_time = int(est_min.strip('\\t'))
+                    else:
+                        line_parts_tokens = line_parts[1].split('. ')
+                        est_min = line_parts_tokens[1]
                         secure_erase_time = int(est_min.strip('\\t'))
     return secure_erase_time

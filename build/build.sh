@@ -2,7 +2,7 @@ unset SKIPFS
 unset REMOVEALL
 unset USECUSTOMSCRIPT
 
-while getopts "s:c:" opt; do
+while getopts "s:c::v:" opt; do
  case ${opt} in 
      s )
        SKIPFS=1
@@ -10,6 +10,8 @@ while getopts "s:c:" opt; do
      c )
        USECUSTOMSCRIPT=$OPTARG
        ;;
+     v )
+       VARIANT=$OPTARG
     esac
 done
 
@@ -31,9 +33,11 @@ cp /etc/hosts ds_root/hosts
 cp /etc/resolv.conf ds_root/etc/resolv.conf
 
 
-#Setup autologin on TTY1
-mkdir -p ds_root/etc/systemd/system/getty@tty1.service.d
+#Setup autologin on TTY1 and 2
+mkdir -p ds_root/etc/systemd/system/getty@tty{1,2,3}.service.d
 cp systemd/getty\@tty1.service ds_root/etc/systemd/system/getty@tty1.service.d/override.conf
+cp systemd/getty\@tty1.service ds_root/etc/systemd/system/getty@tty2.service.d/override.conf
+cp systemd/getty\@tty1.service ds_root/etc/systemd/system/getty@tty3.service.d/override.conf
 
 #Enter chroot and build it
 chroot ds_root bash "/build_chroot.sh"
@@ -41,15 +45,20 @@ rm ds_root/build_chroot.sh
 
 #Setup root to autolaunch our diskslaw script
 sed -i -e 's/root:\/bin\/bash/root:\/opt\/diskslaw\/diskslaw.sh/g' ds_root/etc/passwd
-sed -i -e 's/#NAutoVTs=6/NAutoVTs=2/g' ds_root/etc/systemd/logind.conf
-sed -i -e 's/#ReserveVT=6/#ReserveVT=2/g' ds_root/etc/systemd/logind.conf
+sed -i -e 's/#\?NAutoVTs=[0-9]\+/NAutoVTs=3/g' ds_root/etc/systemd/logind.conf
+sed -i -e 's/#\?ReserveVT=[0-9]\+/#ReserveVT=3/g' ds_root/etc/systemd/logind.conf
+
+#Disable lid switch action
+sed -i -e 's/#\?HandleLidSwitch=[a-zA-Z]\+/HandleLidSwitch=ignore/g' ds_root/etc/systemd/logind.conf
 
 #Copy over the scripts
 cp ../diskslaw/ ds_root/opt/ -f -r
 
-#If they want to provide their own script via network
+#If they want to provide their own script via network or use a variant script
 if [ $USECUSTOMSCRIPT ]; then
-    mv ds_root/opt/diskslaw/diskslaw_custom.sh ds_root/opt/diskslaw/diskslaw.sh
+    mv ds_root/opt/diskslaw/scripts/custom/diskslaw_custom.sh ds_root/opt/diskslaw/diskslaw.sh
+elif [ $VARIANT ]; then
+    cp ds_root/opt/diskslaw/scripts/${VARIANT}/* ds_root/opt/diskslaw/ -r
 fi
 
 chmod +x ds_root/opt/diskslaw/diskslaw.sh
