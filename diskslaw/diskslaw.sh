@@ -5,7 +5,7 @@ dmesg -n 1
 #Configure dialog to work correctly
 export NCURSES_NO_UTF8_ACS=1
 current_tty=$(tty)
-view_results="python3 /opt/diskslaw/tools/view_results.py /tmp/DiskSlaw.csv 25 device,status,validated,details,wwid"
+view_results="python3 /opt/diskslaw/tools/view_results.py /tmp/DiskSlaw.csv 20 device,status,validated,wwid"
 #If we are on TTY1 run diskslaw
 if [[ $current_tty =~ "tty1" ]]; then
     #Launch diskslaw if it hasn't launched before

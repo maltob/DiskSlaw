@@ -25,12 +25,12 @@ skip_removable: true
 nvme_wipe_type: 1
 
 # Always shred rotational disks - even if they support secure erase
-always_shred_rotational: false
+always_shred_rotational: true
 
 #Run shred even if we used secure erase/nvme format
 always_shred: false
 
 # Attempt enhanced Secure Erase
 # Enhanced secure erase *may* attempt to overwrite even blocks marked as bad or reserved at the cost of taking longer 
-# Not all drives support enhanced erase
-attempt_enhanced_secure_erase: true
+# Not all drives support enhanced erase, and I had found one that after this ran it didn't pass validation
+attempt_enhanced_secure_erase: false

@@ -21,7 +21,7 @@ sudo apt-get install syslinux squashfs-tools genisoimage debootstrap syslinux me
 #Install base OS
 if [ ! -d ds_root ]; then
     mkdir ds_root
-    debootstrap --cache-dir=/tmp/debootcache bionic ds_root http://archive.ubuntu.com/ubuntu/
+    debootstrap bionic ds_root http://archive.ubuntu.com/ubuntu/
 fi
 
 #Chroot install script
