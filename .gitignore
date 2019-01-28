@@ -2,3 +2,4 @@ Makefile
 build/ds_root
 build/ds_cd_base
 build/diskslaw.iso
+.vscode/

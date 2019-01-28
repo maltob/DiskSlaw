@@ -34,19 +34,18 @@ cp /etc/resolv.conf ds_root/etc/resolv.conf
 
 
 #Setup autologin on TTY1 and 2
-mkdir -p ds_root/etc/systemd/system/getty@tty{1,2,3}.service.d
+mkdir -p ds_root/etc/systemd/system/getty@tty{1,2,3,4}.service.d
 cp systemd/getty\@tty1.service ds_root/etc/systemd/system/getty@tty1.service.d/override.conf
-cp systemd/getty\@tty1.service ds_root/etc/systemd/system/getty@tty2.service.d/override.conf
-cp systemd/getty\@tty1.service ds_root/etc/systemd/system/getty@tty3.service.d/override.conf
+cp systemd/getty\@tty2.service ds_root/etc/systemd/system/getty@tty2.service.d/override.conf
+cp systemd/getty\@tty2.service ds_root/etc/systemd/system/getty@tty3.service.d/override.conf
+cp systemd/getty\@tty2.service ds_root/etc/systemd/system/getty@tty4.service.d/override.conf
 
-#Enter chroot and build it
-chroot ds_root bash "/build_chroot.sh"
-rm ds_root/build_chroot.sh
 
 #Setup root to autolaunch our diskslaw script
-sed -i -e 's/root:\/bin\/bash/root:\/opt\/diskslaw\/diskslaw.sh/g' ds_root/etc/passwd
-sed -i -e 's/#\?NAutoVTs=[0-9]\+/NAutoVTs=3/g' ds_root/etc/systemd/logind.conf
-sed -i -e 's/#\?ReserveVT=[0-9]\+/#ReserveVT=3/g' ds_root/etc/systemd/logind.conf
+#sed -i -e 's/\/root:[\/A-Za-z \.]\+/\/root:\/opt\/diskslaw\/diskslaw.py/g' ds_root/etc/passwd
+sed -i -e 's/\/root:[\/A-Za-z \.]\+/\/root:\/opt\/diskslaw\/diskslaw.sh/g' ds_root/etc/passwd
+sed -i -e 's/#\?NAutoVTs=[0-9]\+/NAutoVTs=4/g' ds_root/etc/systemd/logind.conf
+sed -i -e 's/#\?ReserveVT=[0-9]\+/#ReserveVT=4/g' ds_root/etc/systemd/logind.conf
 
 #Disable lid switch action
 sed -i -e 's/#\?HandleLidSwitch=[a-zA-Z]\+/HandleLidSwitch=ignore/g' ds_root/etc/systemd/logind.conf
@@ -62,8 +61,11 @@ elif [ $VARIANT ]; then
 fi
 
 chmod +x ds_root/opt/diskslaw/diskslaw.sh
+chmod +x ds_root/opt/diskslaw/diskslaw.py
 
-
+#Enter chroot and build it
+chroot ds_root bash "/build_chroot.sh"
+rm ds_root/build_chroot.sh
 
 #If we don't have the cd base, build it
 if [ ! -e ds_cd_base/isolinux/isolinux.cfg ]; then

@@ -1,6 +1,6 @@
 from os import path,scandir
 from sys import stderr
-from subprocess import Popen,PIPE,DEVNULL
+from subprocess import Popen,PIPE,DEVNULL,call
 
 #Write out validation items
 def create_validation_text(validation_string,device):
@@ -199,6 +199,9 @@ def get_secure_erase_time(device):
                         est_min = line_parts[0]
                         secure_erase_time = int(est_min.strip('\\t'))
     return secure_erase_time
+
+def reset_device(device):
+    call(['hdparm','-w',('/dev/'+device)],stdout=DEVNULL,stderr=DEVNULL)
 
 def get_enhanced_secure_erase_time(device):
     secure_erase_time=10

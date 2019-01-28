@@ -1,4 +1,4 @@
-from subprocess import call
+from subprocess import call,Popen
 
 #Wrapper function around setterm to disable the screen blanking out
 def disable_terminal_blanking():
@@ -6,4 +6,5 @@ def disable_terminal_blanking():
 
 #Wrapper around pm-suspend to put computer to sleep
 def suspend_computer():
-    call('pm-suspend')
+    proc = Popen(['pm-suspend'])
+    proc.communicate()
