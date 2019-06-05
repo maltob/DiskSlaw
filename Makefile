@@ -4,8 +4,9 @@ DEBIAN_PACKAGE_INSTALL_COMMAND = sudo apt-get install syslinux squashfs-tools ge
 ISONAME = wipedisk.iso
 DEBOOTSTRAP_OS = bionic
 DEBOOTSTRAP_SOURCE = http://archive.ubuntu.com/ubuntu/
-CHROOT_DIR = ds_chroot
-CD_BUILD_DIR = ds_iso_build
+CHROOT_DIR = build/ds_chroot
+CD_BUILD_DIR = build/ds_iso_build
+DEBOOTSTRAP_CACHE_DIR = /tmp/debootcache
 
 DEBOOTSTRAP_OPTIONS?= --no-check-certificate --cache-dir=/tmp/debootcache
 
@@ -22,10 +23,13 @@ pre_reqs:
 $(CHROOT_DIR) : pre_reqs
 	mkdir -p $(CHROOT_DIR)
 
-$(CHROOT_DIR)/debootstrap/debootstrap.log: $(CHROOT_DIR) 
+$(DEBOOTSTRAP_CACHE_DIR):
+	mkdir $(DEBOOTSTRAP_CACHE_DIR)
+
+$(CHROOT_DIR)/debootstrap/: $(CHROOT_DIR) $(DEBOOTSTRAP_CACHE_DIR)
 	-debootstrap $(DEBOOTSTRAP_OPTIONS) $(DEBOOTSTRAP_OS) $(CHROOT_DIR) $(DEBOOTSTRAP_SOURCE) 
 
-$(CHROOT_DIR)/sbin/hdparm: $(CHROOT_DIR)/debootstrap/debootstrap.log
+$(CHROOT_DIR)/sbin/hdparm: $(CHROOT_DIR)/debootstrap/
 	cp build/build_chroot.sh $(CHROOT_DIR)/
 	chmod +x $(CHROOT_DIR)/build_chroot.sh
 	cp /etc/hosts $(CHROOT_DIR)/hosts

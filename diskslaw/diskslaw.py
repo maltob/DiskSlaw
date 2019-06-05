@@ -131,7 +131,7 @@ while allThreadsFinished == False:
     #Count threads still running
     for i in range(len(wiping_threads)):
         if(wiping_threads[i].is_alive()):
-            threadsRunning+=1
+            threadsRunning += 1
             try:
                 eta = ''
                 eta = wiping_threads[i].get_wipe_progress()

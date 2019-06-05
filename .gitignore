@@ -1,5 +1,10 @@
 Makefile
 build/ds_root
+build/ds_chroot
+build/ds_iso_build
 build/ds_cd_base
 build/diskslaw.iso
 .vscode/
+ds_chroot/
+ds_iso_build/
+wipedisk.iso

@@ -22,7 +22,7 @@ else
     #TTY3 shows dstat
     dstat -dr --disk-util --disk-tps
 fi
-read -p "Press enter to continue. Press the power button to shut down."
+read -p "Press enter to restart program. Press the power button to shut down."
 
 #Delay to keep systemd from thinking we are crashing when we are too slow releasing enter
 sleep 5
