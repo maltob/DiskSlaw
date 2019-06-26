@@ -48,7 +48,7 @@ class disk_eraser(threading.Thread):
         
         if 'nvme' in device:
             value = "nvme "+config.nvme_wipe_lookup[config.nvme_wipe_type]+" wipe"
-        elif get_secure_erase(device) == True:
+        elif get_secure_erase(device):
             if config.attempt_enhanced_secure_erase:
                 value = 'enhanced secure erase'
             else:

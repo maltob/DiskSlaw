@@ -45,11 +45,10 @@ class disk_eraser_secure_erase(diskslaw_erase.disk_eraser):
         self.init_wipe()
         #Supports secure erase, either a mechanical drive with encryption or an SSD
         #Set the password so we can wipe it, I've had better luck with calling it twice
-        if get_drive_has_master_password(self.wipe_device) == False:
-            self.sata_set_password(self.wipe_device,'NULL')
-            sleep(1)
-            self.sata_set_password(self.wipe_device,'pass')
-            sleep(1)
+        self.sata_set_password(self.wipe_device,'NULL')
+        sleep(1)
+        self.sata_set_password(self.wipe_device,'pass')
+        sleep(1)
         #Get the estimated amount of time to wipe
         estimated_time = get_secure_erase_time(self.wipe_device)
         #Get current time

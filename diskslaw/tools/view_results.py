@@ -28,7 +28,7 @@ if len(sys.argv) > 2:
         print (sys.argv[2]+" is not a number")
     exit
 
-# The third argument is max column length
+# The fourth argument is list of columns
 if len(sys.argv) > 3:
     try:
         include_columns = str(sys.argv[3]).split(",")

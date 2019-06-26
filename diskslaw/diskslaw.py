@@ -55,6 +55,7 @@ ds_configuration = diskslaw_config()
 #Load in config options
 if 'skip_removable' in ds_config_hash:
     skip_removables = bool(ds_config_hash['skip_removable'])
+    ds_log('Skip removable drives: enabled')
 
 if 'ignore_device_model_strings' in ds_config_hash:
     models_to_skip = ds_config_hash['ignore_device_model_strings']
@@ -97,6 +98,11 @@ if anyDeviceFrozen == True:
     ds_log("Recovered from sleep")
 
 
+#Log out options
+ds_log("Options")
+ds_log("Always Shred: "+str(ds_configuration.always_shred))
+ds_log("Attempt Enhanced SE: "+str(ds_configuration.attempt_enhanced_secure_erase))
+ds_log("Mechanical Wipe Type: "+ds_configuration.mech_wipe_type)
 
 #Wipe the drive
 #userDialog.clear()

@@ -11,6 +11,11 @@ view_results="python3 /opt/diskslaw/tools/view_results.py /tmp/DiskSlaw.csv 20 d
 #If we are on TTY1 run diskslaw
 if [[ $current_tty =~ "tty1" ]]; then
     python3 /opt/diskslaw/diskslaw.py
+    clear
+    echo "Computer Product: `dmidecode -s system-product-name`"
+    echo "Computer Serial: `dmidecode -s system-serial-number`"
+    echo "Computer Asset Tag: `dmidecode -s baseboard-asset-tag`"
+    $view_results
 elif [[ $current_tty =~ "tty2" ]]; then
     #TTY2 shows the log files
     sleep 5
