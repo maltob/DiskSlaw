@@ -42,56 +42,57 @@ class disk_eraser_secure_erase(diskslaw_erase.disk_eraser):
         return eta
 
     def wipe(self):
-        self.init_wipe()
-        #Supports secure erase, either a mechanical drive with encryption or an SSD
-        #Set the password so we can wipe it, I've had better luck with calling it twice
-        self.sata_set_password(self.wipe_device,'NULL')
-        sleep(1)
-        self.sata_set_password(self.wipe_device,'pass')
-        sleep(1)
-        #Get the estimated amount of time to wipe
-        estimated_time = get_secure_erase_time(self.wipe_device)
-        #Get current time
-        self.wipe_type = ""
-        #Wipe
-        if self.diskslaw_configuration.attempt_enhanced_secure_erase == True:
-            see_ret = self.sata_enhanced_secure_erase(self.wipe_device,'pass')
-            _,wiped_validation = validate_text(self.diskslaw_configuration.validation_text,self.wipe_device)
-            if see_ret == 0 and wiped_validation == True:
-                estimated_time = get_enhanced_secure_erase_time(self.wipe_device)
-                self.wipe_type = "enhanced "
-                se_ret = see_ret
+        wipe_started = self.init_wipe()
+        if wipe_started == True:
+            #Supports secure erase, either a mechanical drive with encryption or an SSD
+            #Set the password so we can wipe it, I've had better luck with calling it twice
+            self.sata_set_password(self.wipe_device,'NULL')
+            sleep(1)
+            self.sata_set_password(self.wipe_device,'pass')
+            sleep(1)
+            #Get the estimated amount of time to wipe
+            estimated_time = get_secure_erase_time(self.wipe_device)
+            #Get current time
+            self.wipe_type = ""
+            #Wipe
+            if self.diskslaw_configuration.attempt_enhanced_secure_erase == True:
+                see_ret = self.sata_enhanced_secure_erase(self.wipe_device,'pass')
+                _,wiped_validation = validate_text(self.diskslaw_configuration.validation_text,self.wipe_device)
+                if see_ret == 0 and wiped_validation == True:
+                    estimated_time = get_enhanced_secure_erase_time(self.wipe_device)
+                    self.wipe_type = "enhanced "
+                    se_ret = see_ret
+                else:
+                    se_ret = self.sata_secure_erase(self.wipe_device,'pass')
             else:
                 se_ret = self.sata_secure_erase(self.wipe_device,'pass')
-        else:
-            se_ret = self.sata_secure_erase(self.wipe_device,'pass')
 
-        #Disable the drive password to unlock it
-        self.sata_disable_password(self.wipe_device,'pass')
+            #Disable the drive password to unlock it
+            self.sata_disable_password(self.wipe_device,'pass')
 
-        #If secure erase failed, fall back to shred
-        if se_ret != 0 or self.diskslaw_configuration.always_shred:
-            if self.diskslaw_configuration.always_shred == True and se_ret == 0:
-                self.wipe_type += "secure erase + "
-            else:
-                self.wipe_type = ""
-            #Fall back to shred
-            if self.diskslaw_configuration.mech_wipe_type == 'zero':
-                self.wipe_return_code = self.zero_device(self.wipe_device,self.diskslaw_configuration.mech_wipe_rounds)
-                self.wipe_type += "zero"
-            else:
-                self.wipe_return_code = self.shred_device(self.wipe_device,self.diskslaw_configuration.mech_wipe_rounds)
-                self.wipe_type += "shred"
-        else:
-            #Get time elapsed
-            elapsed = monotonic()-self.wipe_start
-            #If we are far off from estimated time, sleep to allow the drive to finish up
-            if(((estimated_time*60)) > (elapsed)):
-                if(elapsed < 10):
-                    #We probably didn't even try to secure erase
-                    sleep(1)
+            #If secure erase failed, fall back to shred
+            if se_ret != 0 or self.diskslaw_configuration.always_shred:
+                if self.diskslaw_configuration.always_shred == True and se_ret == 0:
+                    self.wipe_type += "secure erase + "
                 else:
-                    sleep(int((estimated_time*60)-elapsed))
-            self.wipe_return_code = se_ret
-            self.wipe_type += "secure erase"
+                    self.wipe_type = ""
+                #Fall back to shred
+                if self.diskslaw_configuration.mech_wipe_type == 'zero':
+                    self.wipe_return_code = self.zero_device(self.wipe_device,self.diskslaw_configuration.mech_wipe_rounds)
+                    self.wipe_type += "zero"
+                else:
+                    self.wipe_return_code = self.shred_device(self.wipe_device,self.diskslaw_configuration.mech_wipe_rounds)
+                    self.wipe_type += "shred"
+            else:
+                #Get time elapsed
+                elapsed = monotonic()-self.wipe_start
+                #If we are far off from estimated time, sleep to allow the drive to finish up
+                if(((estimated_time*60)) > (elapsed)):
+                    if(elapsed < 10):
+                        #We probably didn't even try to secure erase
+                        sleep(1)
+                    else:
+                        sleep(int((estimated_time*60)-elapsed))
+                self.wipe_return_code = se_ret
+                self.wipe_type += "secure erase"
         self.end_wipe()

@@ -14,23 +14,24 @@ class disk_eraser_nvme(diskslaw_erase.disk_eraser):
         return ''
 
     def wipe(self):
-        self.init_wipe()
-        #NVMe drive, wipe
-        self.wipe_type = ""
-        nvme_ret = self.nvme_wipe(self.wipe_device,self.diskslaw_configuration.nvme_wipe_type)
-        if nvme_ret == 0:
-            nvme_se_text = self.diskslaw_configuration.nvme_wipe_lookup[self.diskslaw_configuration.nvme_wipe_type]
-            self.wipe_type = "nvme "+nvme_se_text+" wipe"
-            self.wipe_return_code = nvme_ret
+        wipe_started = self.init_wipe()
+        if wipe_started == True:
+            #NVMe drive, wipe
+            self.wipe_type = ""
+            nvme_ret = self.nvme_wipe(self.wipe_device,self.diskslaw_configuration.nvme_wipe_type)
+            if nvme_ret == 0:
+                nvme_se_text = self.diskslaw_configuration.nvme_wipe_lookup[self.diskslaw_configuration.nvme_wipe_type]
+                self.wipe_type = "nvme "+nvme_se_text+" wipe"
+                self.wipe_return_code = nvme_ret
 
-        if nvme_ret != 0 or self.diskslaw_configuration.always_shred == True:
-            #Fall back to shred
-            if self.diskslaw_configuration.always_shred == True and self.wipe_type != "":
-                self.wipe_type += " + "
-            if self.diskslaw_configuration.mech_wipe_type == 'zero':
-                self.wipe_return_code = self.zero_device(self.wipe_device,self.diskslaw_configuration.mech_wipe_rounds)
-                self.wipe_type += "zero"
-            else:
-                self.wipe_return_code = self.shred_device(self.wipe_device,self.diskslaw_configuration.mech_wipe_rounds)
-                self.wipe_type += "shred"
+            if nvme_ret != 0 or self.diskslaw_configuration.always_shred == True:
+                #Fall back to shred
+                if self.diskslaw_configuration.always_shred == True and self.wipe_type != "":
+                    self.wipe_type += " + "
+                if self.diskslaw_configuration.mech_wipe_type == 'zero':
+                    self.wipe_return_code = self.zero_device(self.wipe_device,self.diskslaw_configuration.mech_wipe_rounds)
+                    self.wipe_type += "zero"
+                else:
+                    self.wipe_return_code = self.shred_device(self.wipe_device,self.diskslaw_configuration.mech_wipe_rounds)
+                    self.wipe_type += "shred"
         self.end_wipe()

@@ -74,9 +74,9 @@ class disk_eraser(threading.Thread):
 
     def init_wipe(self):
         #Write out text to make sure we know if it worked
-        create_validation_text(self.diskslaw_configuration.validation_text,self.wipe_device)
-        
+        valid_text = create_validation_text(self.diskslaw_configuration.validation_text,self.wipe_device)
         self.wipe_start = monotonic()
+        return valid_text
 
     def end_wipe(self):
         #Check the text is gone
@@ -87,12 +87,12 @@ class disk_eraser(threading.Thread):
         self.wipe_time = monotonic()-self.wipe_start
 
     def wipe(self):
-        self.init_wipe()
-         #Mechanical Drive probably, doesn't support secure erase so write to it
-        
-        (return_code,mech_wipe_type) = self.mech_wipe()
-        self.wipe_return_code = return_code
-        self.wipe_type = mech_wipe_type
+        wipe_started = self.init_wipe()
+        if wipe_started == True:
+            #Mechanical Drive probably, doesn't support secure erase so write to it
+            (return_code,mech_wipe_type) = self.mech_wipe()
+            self.wipe_return_code = return_code
+            self.wipe_type = mech_wipe_type
 
         self.end_wipe()
         
