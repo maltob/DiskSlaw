@@ -77,6 +77,7 @@ class disk_eraser_secure_erase(diskslaw_erase.disk_eraser):
                 else:
                     self.wipe_type = ""
                 #Fall back to shred
+                
                 if self.diskslaw_configuration.mech_wipe_type == 'zero':
                     self.wipe_return_code = self.zero_device(self.wipe_device,self.diskslaw_configuration.mech_wipe_rounds)
                     self.wipe_type += "zero"
@@ -87,12 +88,13 @@ class disk_eraser_secure_erase(diskslaw_erase.disk_eraser):
                 #Get time elapsed
                 elapsed = monotonic()-self.wipe_start
                 #If we are far off from estimated time, sleep to allow the drive to finish up
+                self.wipe_return_code = se_ret
+                self.wipe_type += "secure erase"
                 if(((estimated_time*60)) > (elapsed)):
                     if(elapsed < 10):
                         #We probably didn't even try to secure erase
                         sleep(1)
                     else:
                         sleep(int((estimated_time*60)-elapsed))
-                self.wipe_return_code = se_ret
-                self.wipe_type += "secure erase"
+                        self.wipe_type += " (t)"
         self.end_wipe()

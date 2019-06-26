@@ -169,7 +169,7 @@ def get_drive_frozen(device):
     hdparm_p = Popen(['hdparm','-I',('/dev/'+device)],stdout=PIPE,stderr=DEVNULL)
     (hdparm_out,_) = hdparm_p.communicate()
     if 'frozen' in str(hdparm_out):
-        if 'not\tfrozen' in str(hdparm_out):
+        if 'not\\tfrozen' in str(hdparm_out):
             frozen = False
         else:
             frozen = True
@@ -180,7 +180,7 @@ def get_drive_has_master_password(device):
     hdparm_p = Popen(['hdparm','-I',('/dev/'+device)],stdout=PIPE,stderr=DEVNULL)
     (hdparm_out,_) = hdparm_p.communicate()
     if 'enabled' in str(hdparm_out):
-        if 'not\tenabled' in str(hdparm_out):
+        if 'not\\tenabled' in str(hdparm_out):
             has_master_password = False
         else:
             has_master_password = True

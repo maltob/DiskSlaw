@@ -1,6 +1,6 @@
 #!/bin/bash
 #Disable Console Messages, they break Dialog
-#dmesg -n 1
+dmesg -n 1
 
 current_tty=$(tty)
 

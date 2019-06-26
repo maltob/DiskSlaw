@@ -6,7 +6,7 @@ from dialog import Dialog
 from os import path
 from datetime import datetime
 from diskslaw_power_management import disable_terminal_blanking,suspend_computer
-from diskslaw_block import create_validation_text,validate_text,get_valid_devices,get_drive_frozen,get_secure_erase_time,get_wwid,get_model,get_vendor,reset_device
+from diskslaw_block import create_validation_text,validate_text,get_valid_devices,get_drive_frozen,get_secure_erase_time,get_wwid,get_model,get_vendor,reset_device,get_drive_has_master_password
 from diskslaw_erase import disk_eraser
 from sys import stderr
 from time import sleep,monotonic
@@ -78,18 +78,37 @@ for device in skipped_devices:
     ds_log('Skipping '+device+' because '+skipped_device_reason[index])
     index+=1
 
+
 #Create the dialog
 userDialog = Dialog(dialog="dialog",autowidgetsize=True)
 userDialog.set_background_title("Drive Wipe")
 
-#Check for any frozen drives, try to reset it first
+#Check for any frozen drives or password protected drives, try to reset it first
 anyDeviceFrozen = False
 for dev in valid_devices:
     if get_drive_frozen(dev) == True:
         anyDeviceFrozen = True
         ds_log(''+dev+' is still frozen, will need to suspend' )
+    if get_drive_has_master_password(dev) == True:
+        ds_log(''+dev+' has a master password, will need to unlock' )
+        while get_drive_has_master_password(dev) == True:
+            userDialog.clear()
+            lockedDisk = disk_eraser_secure_erase(dev,ds_configuration)
+            (ret_code, drive_password) = userDialog.passwordbox("Enter password for locked harddrive "+dev+".\r\nLeave empty to use DiskSlaw defaults.\r\nNote: No indicator shows for the password")
+            if len(drive_password) < 1:
+                lockedDisk.sata_disable_password(dev,'pass')
+            else:
+                lockedDisk.sata_disable_password(dev,drive_password)
+            del lockedDisk
+            if get_drive_has_master_password(dev) == True:
+                userDialog.msgbox("Incorrect Password for "+dev)
+
+
+
+
 #If there are frozen drives, suspend the machine to unfreeze them
 if anyDeviceFrozen == True:
+    userDialog.clear()
     userDialog.msgbox("A frozen SSD was found. I will need to go to sleep mode to unfreeze it. Press OK then wait a few seconds for the machine to fall asleep. Then press a keyboard key to wake it back up.")
     ds_log("Going to sleep")
     suspend_computer()
