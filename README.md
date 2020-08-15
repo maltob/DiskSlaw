@@ -1,6 +1,8 @@
 # DiskSlaw
 DiskSlaw is a tool for mass wiping of disks whether they be mechanical or solid state.
 
+#### This project is archived, I no longer have the hardware to maintain and test the various hardware configurations.
+
 ### Motivation
 I wanted a solution that would: 
  * Use the most appropriate wiping method for a media
