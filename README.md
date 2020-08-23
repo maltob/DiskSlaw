@@ -2,6 +2,7 @@
 DiskSlaw is a tool for mass wiping of disks whether they be mechanical or solid state.
 
 #### This project is archived, I no longer have the hardware to maintain and test the various hardware configurations.
+#### If the drive secure erase fails, you may end up with a difficult to boot system that will ask for a password.
 
 ### Motivation
 I wanted a solution that would: 
